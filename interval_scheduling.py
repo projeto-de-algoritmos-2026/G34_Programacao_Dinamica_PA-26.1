@@ -59,11 +59,13 @@ def format_time(total_minutes: int) -> str:
     return f"{hours:02d}:{minutes:02d}"
 
 
-def schedule_activities(activities: List[Activity]) -> Tuple[List[Activity], List[Activity]]:
+def schedule_activities(
+    activities: List[Activity],
+) -> Tuple[List[Activity], List[Tuple[Activity, "Activity | None"]]]:
     ordered = sorted(activities, key=lambda activity: (activity.end_minutes, activity.start_minutes))
 
     selected: List[Activity] = []
-    rejected: List[Activity] = []
+    rejected: List[Tuple[Activity, "Activity | None"]] = []
     current_end = 0
 
     for activity in ordered:
@@ -71,6 +73,7 @@ def schedule_activities(activities: List[Activity]) -> Tuple[List[Activity], Lis
             selected.append(activity)
             current_end = activity.end_minutes
         else:
-            rejected.append(activity)
+            conflict = selected[-1] if selected else None
+            rejected.append((activity, conflict))
 
     return selected, rejected
