@@ -246,9 +246,10 @@ def render_tab_resultado(
 def render_tab_cadastradas(activities: List[Activity]) -> None:
     st.caption(
         "Lista completa na ordem de inserção. "
-        "Marque as atividades que deseja remover e confirme."
+        "Edite as atividades e clique em 'Salvar alterações' para atualizar."
     )
 
+    # Criar dataframe editável
     df = activities_to_dataframe(activities).copy()
     df.insert(0, "Remover", False)
 
@@ -259,16 +260,83 @@ def render_tab_cadastradas(activities: List[Activity]) -> None:
         column_config={"Remover": st.column_config.CheckboxColumn("Remover")},
     )
 
-    to_remove = edited.index[edited["Remover"]].tolist()
-
-    if to_remove:
-        if st.button(
-            f"Remover {len(to_remove)} selecionada(s)",
-            type="primary",
-        ):
-            for i in sorted(to_remove, reverse=True):
-                st.session_state.activities.pop(i)
-            st.rerun()
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("Salvar alterações", type="primary", use_container_width=True):
+            try:
+                new_activities = []
+                
+                for idx, row in edited.iterrows():
+                    if row["Remover"]:
+                        continue
+                    
+                    # Validar descrição
+                    description = str(row["Descrição"]).strip()
+                    if not description:
+                        st.error(f"Linha {idx + 1}: Descrição não pode estar vazia.")
+                        return
+                    
+                    # Converter Início (HH:MM) para minutos
+                    inicio_str = str(row["Início"]).strip()
+                    try:
+                        inicio_parts = inicio_str.split(":")
+                        if len(inicio_parts) != 2:
+                            raise ValueError()
+                        start_minutes = int(inicio_parts[0]) * 60 + int(inicio_parts[1])
+                    except:
+                        st.error(f"Linha {idx + 1}: Horário de início inválido. Use HH:MM.")
+                        return
+                    
+                    # Converter Fim (HH:MM) para minutos
+                    fim_str = str(row["Fim"]).strip()
+                    try:
+                        fim_parts = fim_str.split(":")
+                        if len(fim_parts) != 2:
+                            raise ValueError()
+                        end_minutes = int(fim_parts[0]) * 60 + int(fim_parts[1])
+                    except:
+                        st.error(f"Linha {idx + 1}: Horário de término inválido. Use HH:MM.")
+                        return
+                    
+                    # Validar duração
+                    duration_minutes = int(row["Duração (min)"])
+                    if duration_minutes <= 0:
+                        st.error(f"Linha {idx + 1}: Duração deve ser maior que zero.")
+                        return
+                    
+                    # Validar consistência entre Início, Fim e Duração
+                    calculated_duration = end_minutes - start_minutes
+                    if calculated_duration != duration_minutes:
+                        st.error(f"Linha {idx + 1}: Duração inconsistente com horários (deve ser {calculated_duration} min).")
+                        return
+                    
+                    if start_minutes < 0 or end_minutes > MINUTES_PER_DAY:
+                        st.error(f"Linha {idx + 1}: Horários fora do período de um dia.")
+                        return
+                    
+                    new_activities.append(
+                        Activity(description, start_minutes, duration_minutes)
+                    )
+                
+                # Atualizar session_state
+                st.session_state.activities = new_activities
+                st.success("Alterações salvas com sucesso!")
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"Erro ao processar alterações: {str(e)}")
+    
+    with col2:
+        to_remove = edited.index[edited["Remover"]].tolist()
+        if to_remove:
+            if st.button(
+                f"Remover {len(to_remove)} selecionada(s)",
+                use_container_width=True,
+            ):
+                for i in sorted(to_remove, reverse=True):
+                    st.session_state.activities.pop(i)
+                st.rerun()
 
 
 def main() -> None:
