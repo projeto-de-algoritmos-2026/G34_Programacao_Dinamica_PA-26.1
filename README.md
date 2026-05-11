@@ -70,4 +70,4 @@ python main.py
 
 O vídeo de apresentação pode ser acessado clicando no link abaixo.
 
-[Apresentação]()
+[Apresentação](https://youtu.be/9dRBeI_1R3k)
