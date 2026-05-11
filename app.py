@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List, Tuple
+import datetime
 
 import pandas as pd
 import streamlit as st
@@ -160,7 +161,7 @@ def render_sidebar() -> None:
 
         with st.form("add_activity", clear_on_submit=True):
             description = st.text_input("Descrição", placeholder="Ex.: Reunião do projeto")
-            start_time = st.time_input("Início", value=None, step=300)
+            start_time = st.time_input("Inicio", value=datetime.time(8, 0), step=300)
 
             col_num, col_unit = st.columns([3, 2])
             with col_num:
@@ -184,8 +185,6 @@ def render_sidebar() -> None:
             if submitted:
                 if not description.strip():
                     st.error("Informe uma descrição.")
-                elif start_time is None:
-                    st.error("Informe o horário de início.")
                 elif duration_value <= 0:
                     st.error("A duração deve ser maior que zero.")
                 else:
