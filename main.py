@@ -83,7 +83,7 @@ def print_report(
 
 def read_mode() -> str:
     print("Selecione o algoritmo:")
-    print("  1 - Guloso          (maximiza a quantidade de atividades)")
+    print("  1 - Ambicioso       (maximiza a quantidade de atividades)")
     print("  2 - Ponderado (PD)  (maximiza o peso/prioridade total)")
     while True:
         choice = input("Opção [1/2]: ").strip()
