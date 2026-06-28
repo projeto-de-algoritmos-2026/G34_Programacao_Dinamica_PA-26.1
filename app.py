@@ -11,6 +11,7 @@ from interval_scheduling import (
     MINUTES_PER_DAY,
     format_time,
     schedule_activities,
+    weighted_schedule_activities,
 )
 
 st.set_page_config(
@@ -75,6 +76,7 @@ def activities_to_dataframe(activities: List[Activity]) -> pd.DataFrame:
                 "Início": format_time(a.start_minutes),
                 "Fim": format_time(a.end_minutes),
                 "Duração (min)": a.duration_minutes,
+                "Peso": a.weight,
             }
             for a in activities
         ]
@@ -180,6 +182,8 @@ def render_sidebar() -> None:
                     horizontal=True,
                 )
 
+            weight = st.slider("Peso / prioridade", min_value=1, max_value=10, value=1, step=1)
+
             submitted = st.form_submit_button("Adicionar", use_container_width=True)
 
             if submitted:
@@ -194,7 +198,7 @@ def render_sidebar() -> None:
                         st.error("A atividade ultrapassa o período de um dia.")
                     else:
                         st.session_state.activities.append(
-                            Activity(description.strip(), start_minutes, duration_minutes)
+                            Activity(description.strip(), start_minutes, duration_minutes, float(weight))
                         )
                         st.success(f"'{description.strip()}' adicionada.")
 
@@ -209,11 +213,18 @@ def render_tab_resultado(
     activities: List[Activity],
     selected: List[Activity],
     rejected: List[Tuple[Activity, "Activity | None"]],
+    total_weight: float | None = None,
 ) -> None:
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total informadas", len(activities))
-    col2.metric("Selecionadas", len(selected))
-    col3.metric("Descartadas", len(rejected))
+    metrics = [
+        ("Total informadas", len(activities)),
+        ("Selecionadas", len(selected)),
+        ("Descartadas", len(rejected)),
+    ]
+    if total_weight is not None:
+        metrics.append(("Peso total", f"{total_weight:.1f}"))
+    cols = st.columns(len(metrics))
+    for col, (label, value) in zip(cols, metrics):
+        col.metric(label, value)
 
     st.subheader("Linha do tempo")
     render_timeline(selected, rejected)
@@ -304,19 +315,24 @@ def render_tab_cadastradas(activities: List[Activity]) -> None:
                     if duration_minutes <= 0:
                         st.error(f"Linha {idx + 1}: Duração deve ser maior que zero.")
                         return
-                    
+
                     # Validar consistência entre Início, Fim e Duração
                     calculated_duration = end_minutes - start_minutes
                     if calculated_duration != duration_minutes:
                         st.error(f"Linha {idx + 1}: Duração inconsistente com horários (deve ser {calculated_duration} min).")
                         return
-                    
+
                     if start_minutes < 0 or end_minutes > MINUTES_PER_DAY:
                         st.error(f"Linha {idx + 1}: Horários fora do período de um dia.")
                         return
-                    
+
+                    weight = float(row.get("Peso", 1.0))
+                    if weight <= 0:
+                        st.error(f"Linha {idx + 1}: Peso deve ser maior que zero.")
+                        return
+
                     new_activities.append(
-                        Activity(description, start_minutes, duration_minutes)
+                        Activity(description, start_minutes, duration_minutes, weight)
                     )
                 
                 # Atualizar session_state
@@ -344,10 +360,16 @@ def main() -> None:
     render_sidebar()
 
     st.title("Interval Scheduling")
-    st.caption(
-        "Planejador diário baseado em algoritmo guloso — seleciona o maior conjunto "
-        "de atividades sem conflito, ordenando pelo horário de término."
+
+    mode = st.radio(
+        "Algoritmo",
+        ["Guloso — máxima quantidade", "Ponderado (PD) — maior peso total"],
+        horizontal=True,
     )
+    if mode == "Guloso — máxima quantidade":
+        st.caption("Seleciona o maior número de atividades sem conflito (ordena por horário de término).")
+    else:
+        st.caption("Maximiza o peso total das atividades sem conflito via programação dinâmica O(n log n).")
 
     activities: List[Activity] = st.session_state.activities
 
@@ -356,9 +378,13 @@ def main() -> None:
     with tab_resultado:
         if not activities:
             st.info("Adicione atividades pelo menu lateral para iniciar.")
-        else:
+        elif mode == "Guloso — máxima quantidade":
             selected, rejected = schedule_activities(activities)
             render_tab_resultado(activities, selected, rejected)
+        else:
+            selected, rejected_list, total_weight = weighted_schedule_activities(activities)
+            rejected = [(a, None) for a in rejected_list]
+            render_tab_resultado(activities, selected, rejected, total_weight=total_weight)
 
     with tab_cadastradas:
         if not activities:
