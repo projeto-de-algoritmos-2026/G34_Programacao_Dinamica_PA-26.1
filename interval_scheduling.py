@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass
 from typing import List, Tuple
 
@@ -12,6 +13,7 @@ class Activity:
     description: str
     start_minutes: int
     duration_minutes: int
+    weight: float = 1.0
 
     @property
     def end_minutes(self) -> int:
@@ -77,3 +79,47 @@ def schedule_activities(
             rejected.append((activity, conflict))
 
     return selected, rejected
+
+
+def weighted_schedule_activities(
+    activities: List[Activity],
+) -> Tuple[List[Activity], List[Activity], float]:
+    """Weighted Interval Scheduling via DP bottom-up. O(n log n).
+
+    Recorrência: OPT(j) = max(w_j + OPT(p(j)), OPT(j-1))
+    onde p(j) é o predecessor compatível mais tardio de j.
+    Retorna (selecionadas, rejeitadas, peso_total).
+    """
+    if not activities:
+        return [], [], 0.0
+
+    ordered = sorted(activities, key=lambda a: (a.end_minutes, a.start_minutes))
+    n = len(ordered)
+    end_times = [a.end_minutes for a in ordered]
+
+    # p[j] = índice (base 0) do predecessor compatível mais tardio, ou -1
+    # bisect_right encontra a posição de inserção de start[j] em end_times[:j]
+    p = [bisect_right(end_times, ordered[j].start_minutes, hi=j) - 1 for j in range(n)]
+
+    # dp[i] = máximo peso usando os primeiros i intervalos (base 1); dp[0] = 0
+    dp = [0.0] * (n + 1)
+    for i in range(1, n + 1):
+        j = i - 1
+        dp[i] = max(ordered[j].weight + dp[p[j] + 1], dp[i - 1])
+
+    # Backtracking para recuperar o conjunto ótimo
+    selected: List[Activity] = []
+    i = n
+    while i >= 1:
+        j = i - 1
+        if ordered[j].weight + dp[p[j] + 1] >= dp[i - 1]:
+            selected.append(ordered[j])
+            i = p[j] + 1
+        else:
+            i -= 1
+
+    selected.reverse()
+    selected_ids = {id(a) for a in selected}
+    rejected = [a for a in activities if id(a) not in selected_ids]
+
+    return selected, rejected, dp[n]
