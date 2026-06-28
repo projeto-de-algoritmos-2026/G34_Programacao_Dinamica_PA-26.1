@@ -22,17 +22,17 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    [data-testid="stSidebar"] > div:first-child {
+    [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
         min-width: 480px !important;
     }
 
-    /* Toggle de unidade: radio horizontal sem gap entre opções */
-    div[data-testid="stRadio"] > div {
+    /* Toggle de unidade: pill style restrito à sidebar */
+    [data-testid="stSidebar"] div[data-testid="stRadio"] > div {
         flex-direction: row !important;
         gap: 0 !important;
         flex-wrap: nowrap;
     }
-    div[data-testid="stRadio"] > div > label {
+    [data-testid="stSidebar"] div[data-testid="stRadio"] > div > label {
         border: 1px solid rgba(250,250,250,0.2);
         border-radius: 0;
         padding: 4px 12px;
@@ -40,10 +40,10 @@ st.markdown(
         font-size: 13px;
         cursor: pointer;
     }
-    div[data-testid="stRadio"] > div > label:first-child {
+    [data-testid="stSidebar"] div[data-testid="stRadio"] > div > label:first-child {
         border-radius: 4px 0 0 4px;
     }
-    div[data-testid="stRadio"] > div > label:last-child {
+    [data-testid="stSidebar"] div[data-testid="stRadio"] > div > label:last-child {
         border-left: none;
         border-radius: 0 4px 4px 0;
     }
