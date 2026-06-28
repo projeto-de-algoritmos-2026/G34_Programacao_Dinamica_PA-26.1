@@ -22,8 +22,13 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        min-width: 400px !important;
+        max-width: 400px !important;
+    }
     [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
-        min-width: 480px !important;
+        min-width: 400px !important;
+        max-width: 400px !important;
     }
 
     /* Toggle de unidade: pill style restrito à sidebar */
