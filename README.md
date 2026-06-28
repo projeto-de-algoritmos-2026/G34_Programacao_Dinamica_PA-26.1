@@ -26,25 +26,21 @@ Projeto G34: Planejador diário com dois modos de agendamento de atividades:
 
 Tela principal com o formulário lateral para cadastro de atividades (descrição, horário de início, duração e peso), além das abas de resultado e atividades cadastradas.
 
-![alt text](assets/image.jpeg)
+![alt text](assets/cadastro.png)
 
 Resultado do agendamento ambicioso: métricas de total informadas, selecionadas e descartadas, seguido da linha do tempo visual com atividades em verde (selecionadas) e vermelho (descartadas).
 
-![alt text](assets/image2.jpeg)
-
-Tabela detalhada com as atividades cadastradas com possibilidade de edição.
-
-![alt text](assets/image3.jpeg)
+![alt text](assets/ambicioso.png)
 
 ### Algoritmo Ponderado (Programação Dinâmica)
 
 Toggle de algoritmo selecionado em **Ponderado (PD)**, com o campo de peso/prioridade no formulário lateral.
 
-![alt text](assets/image_pd_form.jpeg)
+![alt text](assets/cadastroPD.png)
 
 Resultado do agendamento ponderado: métrica de peso total obtido e linha do tempo com o subconjunto de maior peso sem sobreposição.
 
-![alt text](assets/image_pd_resultado.jpeg)
+![alt text](assets/printProgDinamica.png)
 
 ## Instalação 
 **Linguagem:** Python 3.10+  
@@ -86,4 +82,4 @@ python main.py
 
 O vídeo de apresentação pode ser acessado clicando no link abaixo.
 
-[Apresentação](https://youtu.be/9dRBeI_1R3k)
+[Apresentação](https://youtu.be/)

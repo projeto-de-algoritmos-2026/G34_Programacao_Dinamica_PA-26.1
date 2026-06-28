@@ -23,12 +23,12 @@ st.markdown(
     """
     <style>
     [data-testid="stSidebar"][aria-expanded="true"] {
-        min-width: 400px !important;
-        max-width: 400px !important;
+        min-width: 480px !important;
+        max-width: 480px !important;
     }
     [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
-        min-width: 400px !important;
-        max-width: 400px !important;
+        min-width: 480px !important;
+        max-width: 480px !important;
     }
 
     /* Toggle de unidade: pill style restrito à sidebar */
@@ -368,10 +368,10 @@ def main() -> None:
 
     mode = st.radio(
         "Algoritmo",
-        ["Guloso — máxima quantidade", "Ponderado (PD) — maior peso total"],
+        ["Ambicioso — máxima quantidade", "Ponderado (PD) — maior peso total"],
         horizontal=True,
     )
-    if mode == "Guloso — máxima quantidade":
+    if mode == "Ambicioso — máxima quantidade":
         st.caption("Seleciona o maior número de atividades sem conflito (ordena por horário de término).")
     else:
         st.caption("Maximiza o peso total das atividades sem conflito via programação dinâmica O(n log n).")
@@ -383,7 +383,7 @@ def main() -> None:
     with tab_resultado:
         if not activities:
             st.info("Adicione atividades pelo menu lateral para iniciar.")
-        elif mode == "Guloso — máxima quantidade":
+        elif mode == "Ambicioso — máxima quantidade":
             selected, rejected = schedule_activities(activities)
             render_tab_resultado(activities, selected, rejected)
         else:
