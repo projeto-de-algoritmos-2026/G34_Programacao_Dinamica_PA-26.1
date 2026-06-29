@@ -123,3 +123,12 @@ def weighted_schedule_activities(
     rejected = [a for a in activities if id(a) not in selected_ids]
 
     return selected, rejected, dp[n]
+
+
+def find_conflicting_activity(rejected: Activity, selected: List[Activity]) -> Activity | None:
+    """Encontra a primeira atividade selecionada que conflita com a atividade rejeitada."""
+    for sel in selected:
+        if rejected.start_minutes < sel.end_minutes and sel.start_minutes < rejected.end_minutes:
+            return sel
+    return None
+
