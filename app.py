@@ -12,6 +12,7 @@ from interval_scheduling import (
     format_time,
     schedule_activities,
     weighted_schedule_activities,
+    find_conflicting_activity,
 )
 
 st.set_page_config(
@@ -214,6 +215,77 @@ def render_sidebar() -> None:
             st.rerun()
 
 
+def render_custom_metrics(metrics: List[Tuple[str, str]]) -> None:
+    cols = st.columns(len(metrics))
+    for col, (label, value) in zip(cols, metrics):
+        col.markdown(
+            f"""
+            <div style="
+                background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                padding: 20px;
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                text-align: center;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                margin-bottom: 20px;
+            ">
+                <p style="margin: 0; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">{label}</p>
+                <p style="margin: 8px 0 0 0; font-size: 30px; color: #38bdf8; font-weight: 700;">{value}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+def get_dp_table_data(activities: List[Activity], selected_activities: List[Activity]) -> pd.DataFrame:
+    if not activities:
+        return pd.DataFrame()
+    
+    from bisect import bisect_right
+    ordered = sorted(activities, key=lambda a: (a.end_minutes, a.start_minutes))
+    n = len(ordered)
+    end_times = [a.end_minutes for a in ordered]
+    p = [bisect_right(end_times, ordered[j].start_minutes, hi=j) - 1 for j in range(n)]
+    
+    dp = [0.0] * (n + 1)
+    for i in range(1, n + 1):
+        j = i - 1
+        dp[i] = max(ordered[j].weight + dp[p[j] + 1], dp[i - 1])
+        
+    selected_ids = {id(a) for a in selected_activities}
+    
+    rows = []
+    rows.append({
+        "j (Índice)": 0,
+        "Atividade": "— (Caso Base)",
+        "Horário": "—",
+        "Peso (w_j)": 0.0,
+        "Predecessor p(j)": "—",
+        "Decisão": "—",
+        "OPT(j)": 0.0
+    })
+    
+    for j in range(n):
+        act = ordered[j]
+        pred_idx = p[j]
+        pred_str = f"Ativ. {pred_idx + 1}" if pred_idx >= 0 else "Nenhum (0)"
+        
+        is_selected = id(act) in selected_ids
+        decisao = "Selecionada" if is_selected else "Ignorada"
+        
+        rows.append({
+            "j (Índice)": j + 1,
+            "Atividade": act.description,
+            "Horário": f"{format_time(act.start_minutes)} - {format_time(act.end_minutes)}",
+            "Peso (w_j)": act.weight,
+            "Predecessor p(j)": pred_str,
+            "Decisão": decisao,
+            "OPT(j)": dp[j + 1]
+        })
+        
+    return pd.DataFrame(rows)
+
+
 def render_tab_resultado(
     activities: List[Activity],
     selected: List[Activity],
@@ -221,15 +293,14 @@ def render_tab_resultado(
     total_weight: float | None = None,
 ) -> None:
     metrics = [
-        ("Total informadas", len(activities)),
-        ("Selecionadas", len(selected)),
-        ("Descartadas", len(rejected)),
+        ("Total Informadas", str(len(activities))),
+        ("Selecionadas", str(len(selected))),
+        ("Descartadas", str(len(rejected))),
     ]
     if total_weight is not None:
-        metrics.append(("Peso total", f"{total_weight:.1f}"))
-    cols = st.columns(len(metrics))
-    for col, (label, value) in zip(cols, metrics):
-        col.metric(label, value)
+        metrics.append(("Peso Total Obtido", f"{total_weight:.1f}"))
+    
+    render_custom_metrics(metrics)
 
     st.subheader("Linha do tempo")
     render_timeline(selected, rejected)
@@ -315,16 +386,10 @@ def render_tab_cadastradas(activities: List[Activity]) -> None:
                         st.error(f"Linha {idx + 1}: Horário de término inválido. Use HH:MM.")
                         return
                     
-                    # Validar duração
-                    duration_minutes = int(row["Duração (min)"])
+                    # Calcular duração automaticamente com base nos horários de início e fim
+                    duration_minutes = end_minutes - start_minutes
                     if duration_minutes <= 0:
-                        st.error(f"Linha {idx + 1}: Duração deve ser maior que zero.")
-                        return
-
-                    # Validar consistência entre Início, Fim e Duração
-                    calculated_duration = end_minutes - start_minutes
-                    if calculated_duration != duration_minutes:
-                        st.error(f"Linha {idx + 1}: Duração inconsistente com horários (deve ser {calculated_duration} min).")
+                        st.error(f"Linha {idx + 1}: O horário de término deve ser posterior ao horário de início.")
                         return
 
                     if start_minutes < 0 or end_minutes > MINUTES_PER_DAY:
@@ -378,18 +443,42 @@ def main() -> None:
 
     activities: List[Activity] = st.session_state.activities
 
-    tab_resultado, tab_cadastradas = st.tabs(["Resultado", "Atividades cadastradas"])
+    tab_resultado, tab_dp, tab_cadastradas = st.tabs(["Resultado", "Funcionamento (DP)", "Atividades cadastradas"])
+
+    # Pre-calcular resultados se houver atividades
+    selected, rejected, total_weight = [], [], None
+    if activities:
+        if mode == "Ambicioso — máxima quantidade":
+            selected, rejected = schedule_activities(activities)
+        else:
+            selected, rejected_list, total_weight = weighted_schedule_activities(activities)
+            rejected = [(a, find_conflicting_activity(a, selected)) for a in rejected_list]
 
     with tab_resultado:
         if not activities:
             st.info("Adicione atividades pelo menu lateral para iniciar.")
-        elif mode == "Ambicioso — máxima quantidade":
-            selected, rejected = schedule_activities(activities)
-            render_tab_resultado(activities, selected, rejected)
         else:
-            selected, rejected_list, total_weight = weighted_schedule_activities(activities)
-            rejected = [(a, None) for a in rejected_list]
             render_tab_resultado(activities, selected, rejected, total_weight=total_weight)
+
+    with tab_dp:
+        if not activities:
+            st.info("Adicione atividades pelo menu lateral para visualizar o funcionamento do algoritmo.")
+        elif mode == "Ambicioso — máxima quantidade":
+            st.warning("O algoritmo Ambicioso (Interval Scheduling) não utiliza Programação Dinâmica. Selecione o algoritmo 'Ponderado (PD)' acima para ver a tabela de DP.")
+        else:
+            st.markdown("### Tabela de Programação Dinâmica (DP)")
+            st.markdown(
+                r"""
+                A recorrência da Programação Dinâmica para o Weighted Interval Scheduling é definida como:
+                $$OPT(j) = \max(w_j + OPT(p(j)), OPT(j-1))$$
+                Onde:
+                - $w_j$ é o peso/prioridade da atividade $j$.
+                - $p(j)$ é o predecessor compatível mais tardio de $j$ (última atividade antes de $j$ que não se sobrepõe).
+                - $OPT(j)$ é o valor ótimo acumulado até a atividade $j$.
+                """
+            )
+            df_dp = get_dp_table_data(activities, selected)
+            st.dataframe(df_dp, use_container_width=True, hide_index=True)
 
     with tab_cadastradas:
         if not activities:
