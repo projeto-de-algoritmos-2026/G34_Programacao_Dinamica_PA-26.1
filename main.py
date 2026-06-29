@@ -10,6 +10,7 @@ from interval_scheduling import (
     parse_time,
     schedule_activities,
     weighted_schedule_activities,
+    find_conflicting_activity,
 )
 
 
@@ -50,7 +51,7 @@ def read_activity(with_weight: bool = False) -> Activity:
 
 def print_report(
     selected: List[Activity],
-    rejected: List[Activity],
+    rejected_with_conflict: List[Tuple[Activity, "Activity | None"]],
     total_weight: float | None = None,
 ) -> None:
     if total_weight is None:
@@ -71,11 +72,13 @@ def print_report(
         print("- Nenhuma atividade pode ser realizada.")
 
     print("\nAtividades que não poderão ser realizadas:")
-    if rejected:
-        for activity in rejected:
+    if rejected_with_conflict:
+        for activity, conflict in rejected_with_conflict:
+            conflict_info = f" | conflita com: {conflict.description}" if conflict else ""
             print(
                 f"- {activity.description} | início {format_time(activity.start_minutes)} | "
                 f"fim {format_time(activity.end_minutes)} | duração {activity.duration_minutes} min"
+                f"{conflict_info}"
             )
     else:
         print("- Nenhuma atividade foi descartada.")
@@ -120,12 +123,12 @@ def main() -> None:
         return
 
     if mode == "weighted":
-        selected, rejected, total_weight = weighted_schedule_activities(activities)
-        print_report(selected, rejected, total_weight)
+        selected, rejected_list, total_weight = weighted_schedule_activities(activities)
+        rejected_with_conflict = [(a, find_conflicting_activity(a, selected)) for a in rejected_list]
+        print_report(selected, rejected_with_conflict, total_weight)
     else:
         selected, rejected_pairs = schedule_activities(activities)
-        rejected = [a for a, _ in rejected_pairs]
-        print_report(selected, rejected)
+        print_report(selected, rejected_pairs)
 
 
 if __name__ == "__main__":

@@ -15,10 +15,14 @@ Projeto G34: Planejador diário com dois modos de agendamento de atividades:
 - **Ponderado — Weighted Interval Scheduling (PD):** seleciona o subconjunto de atividades sem sobreposição que maximiza o *peso total* (prioridade), usando programação dinâmica bottom-up com busca binária para o predecessor compatível.
 
 **Funcionalidades:**
-- Algoritmos em `interval_scheduling.py`: `schedule_activities` (ambicioso O(n log n)) e `weighted_schedule_activities` (PD O(n log n)).
-- App web Streamlit (`app.py`): cadastro de atividades com descrição, horário de início, duração e peso/prioridade (1–10) → toggle de algoritmo → linha do tempo (Altair), métricas e tabelas de selecionadas/descartadas.
-- CLI (`main.py`): seleção de modo (1 = ambicioso / 2 = ponderado), entrada de atividades via terminal e relatório com peso total quando no modo ponderado.
-- Edição e remoção de atividades diretamente na tabela do app web.
+- **Algoritmos em `interval_scheduling.py`**: `schedule_activities` (ambicioso O(n log n)) e `weighted_schedule_activities` (PD O(n log n)), além da lógica de detecção de conflitos `find_conflicting_activity`.
+- **App web Streamlit (`app.py`)**:
+  - Cadastro e visualização de atividades com linha do tempo interativa (Altair) e métricas estilizadas.
+  - Edição direta de atividades na tabela com recálculo automático de duração.
+  - Aba de **Funcionamento (DP)** exibindo passo a passo a tabela de programação dinâmica, predecessor $p(j)$ e o valor ótimo $OPT(j)$ calculado.
+  - Exibição de com qual atividade selecionada cada atividade descartada conflita.
+- **CLI (`main.py`)**: Modo texto completo, incluindo relatório de conflitos e maior peso total no modo ponderado.
+- **Testes Unitários**: Testes robustos cobrindo todas as funções e algoritmos do projeto.
 
 ## Screenshots
 
@@ -72,6 +76,12 @@ python main.py
 - Informe cada atividade (descrição, horário de início no formato `HH:MM`, duração, unidade e peso se modo ponderado).
 - Responda `s` para adicionar mais atividades ou `n` para encerrar.
 - O relatório lista as atividades selecionadas (com peso total no modo ponderado) e as descartadas.
+
+### Testes Unitários
+```
+python -m unittest test_interval_scheduling.py
+```
+- Executa os testes automatizados que cobrem os algoritmos (ambicioso e ponderado), tratamento e validação de dados.
 
 ## Outros 
 - **Algoritmo ambicioso:** Interval Scheduling Maximization — O(n log n), critério: menor horário de término.
