@@ -92,4 +92,4 @@ python -m unittest test_interval_scheduling.py
 
 O vídeo de apresentação pode ser acessado clicando no link abaixo.
 
-[Apresentação](https://youtu.be/)
+[Apresentação](https://youtu.be/xBtwuFFMqQs) 
